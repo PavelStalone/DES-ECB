@@ -2,18 +2,17 @@ import encrypt.DesEcb
 import encrypt.DesEcbImpl
 
 fun main() {
-    println(ubyteArrayOf(128u).toString())
-    println(((128u as UInt) shl 1).toString(2))
+    println(ubyteArrayOf("11101001".toUByte(2)))
     val des: DesEcb = DesEcbImpl()
-    val message: UByteArray = ubyteArrayOf(1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u)
-    val key: UByteArray = ubyteArrayOf(8u, 7u, 6u, 5u, 4u, 3u, 2u, 1u)
+    val message: UByteArray = ubyteArrayOf(0u, 0u, "11000100".toUByte(2), "11000010".toUByte(2), "11001110".toUByte(2), "11010000".toUByte(2), "11011111".toUByte(2), "11001010".toUByte(2))
+    val key: UByteArray = ubyteArrayOf(0u, 0u, 0u, "11000100".toUByte(2), "11001000".toUByte(2), "11000000".toUByte(2), "11001101".toUByte(2), "11000000".toUByte(2))
 
     val encryptMessage = des.encrypt(message, key)
     val decryptMessage = des.decrypt(encryptMessage, key)
 
-    println("message: $message")
-    println("encryptMessage : $encryptMessage")
-    println("decryptMessage : $decryptMessage")
+    println("initialMessage: $message")
+    println("encryptMessage: $encryptMessage")
+    println("decryptMessage: $decryptMessage")
 }
 
 fun Int.toBinary(len: Int): String {
