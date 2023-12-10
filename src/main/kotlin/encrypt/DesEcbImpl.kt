@@ -13,6 +13,7 @@ import encrypt.Tables.shiftTable
 class DesEcbImpl : DesEcb {
     override fun encrypt(bytes: UByteArray, key: UByteArray): UByteArray {
         var message = bytes.take(8).toUByteArray()
+        println("initial message: ${message.toBytes()} +")
         message = replace64(message, IP)
         println("replaced64 message: ${message.toBytes()} +")
 
@@ -30,7 +31,8 @@ class DesEcbImpl : DesEcb {
             R = r
         }
 
-        var result = L + R
+        var result = R + L
+        println("combined result: ${result.toBytes()}")
         result = replace64(result, reverseIP)
         println("final result: ${result.toBytes()}")
         return result
@@ -38,7 +40,7 @@ class DesEcbImpl : DesEcb {
 
     override fun decrypt(bytes: UByteArray, key: UByteArray): UByteArray {
         var message = bytes.take(8).toUByteArray()
-        message = replace64(message, reverseIP)
+        message = replace64(message, IP)
 
         val sliced = separate(message)
         var L = sliced[1]
@@ -46,14 +48,16 @@ class DesEcbImpl : DesEcb {
 
         repeat(16) { col ->
             val r = L
-            val l = R.xor(encryption(L, K(key, 15 - col))).takeLast(4).toUByteArray()
+            val l = R.xor(encryption(L, K(key, (15 - col)))).takeLast(4).toUByteArray()
 
             L = l
             R = r
         }
 
-        var result = R + L
-        result = replace64(result, IP)
+        var result = L + R
+        println("combined result: ${result.toBytes()}")
+        result = replace64(result, reverseIP)
+        println("final result: ${result.toBytes()}")
         return result
     }
 
@@ -153,7 +157,7 @@ class DesEcbImpl : DesEcb {
             (num shl 4 shl it * 8 shr (7 * 8)).toUByte()
         }
         var rightKey = UByteArray(4) {
-            (num shl (32) shl it * 8 shr (7 * 8)).toUByte()
+            (num shl (32 + 4) shr 4 shl it * 8 shr (7 * 8)).toUByte()
         }
         println("leftKey: ${leftKey.toBytes()} +")
         println("rightKey: ${rightKey.toBytes()} +")
