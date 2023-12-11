@@ -26,7 +26,10 @@ object ByteSpliter {
     }
 
     fun convertKey(key: String): UByteArray {
-        return ubyteArrayOf()
+        val num = key.hashCode().toULong()
+        return UByteArray(8) {
+            (num shl it * 8 shr (7 * 8)).toUByte()
+        }
     }
 }
 
