@@ -14,6 +14,16 @@ object ByteSpliter {
         return list
     }
 
+    fun splitForDes(bytes: UByteArray): List<UByteArray> {
+        return bytes.chunked(8) {
+            it.toUByteArray() + UByteArray(8-it.size){0u}
+        }
+    }
+
+    fun convertToBytes(bytes: List<UByteArray>): UByteArray {
+        return bytes.reduce { acc, uByteArray -> acc + uByteArray }
+    }
+
     fun convertToString(bytes: List<UByteArray>): String {
         return bytes.map(::convertUBytesToString).reduce { acc, s -> acc + s }
     }
