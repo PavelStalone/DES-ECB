@@ -3,6 +3,7 @@ import encrypt.EncryptorDescriptor
 import encrypt.EncryptorDescriptorImpl
 import encrypt.toBinary
 import kotlinx.coroutines.runBlocking
+import kotlin.system.measureTimeMillis
 
 @OptIn(ExperimentalUnsignedTypes::class)
 fun main() {
@@ -74,9 +75,13 @@ fun fileRead(encryptFlag: Boolean) {
     var decryptBytes: UByteArray
 
     if (encryptFlag) {
-        runBlocking {
-            encryptBytes = ByteSpliter.convertToBytes(encryptor.encrypt(input, key))
+        encryptor.keyInit(key)
+        val time = measureTimeMillis {
+            runBlocking {
+                encryptBytes = ByteSpliter.convertToBytes(encryptor.encrypt(input, key))
+            }
         }
+        println("time: $time")
         FileIO.write(saveDirectory, encryptBytes, "[шифр]" + chooseFile.name)
     } else {
         runBlocking {

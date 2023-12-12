@@ -11,34 +11,38 @@ import encrypt.Tables.shiftTable
 
 @OptIn(ExperimentalUnsignedTypes::class)
 class DesEcbImpl : DesEcb {
+    var keys: List<UByteArray> = listOf()
+
     override fun encrypt(bytes: UByteArray, key: UByteArray): UByteArray {
+        if (keys.isEmpty()){
+            keyInit(key)
+        }
+
         var message = bytes.take(8).toUByteArray()
-        // println("initial message: ${message.toBytes()} +")
         message = replace64(message, IP)
-        // println("replaced64 message: ${message.toBytes()} +")
 
         val sliced = separate(message)
         var L = sliced[0]
         var R = sliced[1]
-        // println("firstSlice L: ${L.toBytes()} R: ${R.toBytes()} +")
 
         repeat(16) { col ->
             val l = R
-            val r = L.xor(encryption(R, K(key, col))).takeLast(4).toUByteArray()
-            // println("${col + 1} iterate l: ${l.toBytes()} r: ${r.toBytes()} +")
+            val r = L.xor(encryption(R, keys[col])).takeLast(4).toUByteArray()
 
             L = l
             R = r
         }
 
         var result = R + L
-        // println("combined result: ${result.toBytes()}")
         result = replace64(result, reverseIP)
-        // println("final result: ${result.toBytes()}")
         return result
     }
 
     override fun decrypt(bytes: UByteArray, key: UByteArray): UByteArray {
+        if (keys.isEmpty()){
+            keyInit(key)
+        }
+
         var message = bytes.take(8).toUByteArray()
         message = replace64(message, IP)
 
@@ -48,17 +52,19 @@ class DesEcbImpl : DesEcb {
 
         repeat(16) { col ->
             val r = L
-            val l = R.xor(encryption(L, K(key, (15 - col)))).takeLast(4).toUByteArray()
+            val l = R.xor(encryption(L, keys[15 - col])).takeLast(4).toUByteArray()
 
             L = l
             R = r
         }
 
         var result = L + R
-        // println("combined result: ${result.toBytes()}")
         result = replace64(result, reverseIP)
-        // println("final result: ${result.toBytes()}")
         return result
+    }
+
+    override fun keyInit(key: UByteArray) {
+        keys = List(16){index -> K(key, index) }
     }
 
     private fun replace64(initial: UByteArray, table: List<Int>): UByteArray {
@@ -103,7 +109,6 @@ class DesEcbImpl : DesEcb {
         val result = UByteArray(4) {
             (num shl it * 8 shr (3 * 8)).toUByte()
         }
-        // println("result replace32: ${result.toBytes()} +")
         return result
     }
 
@@ -112,18 +117,12 @@ class DesEcbImpl : DesEcb {
 
     private fun encryption(initial: UByteArray, key: UByteArray): UByteArray {
         var array = replace32to48(initial, E)
-        // println("Upper: ${array.toBytes()} +")
-        // println("Xor with key: ${key.toBytes()}")
         array = array.xor(key).takeLast(6).toUByteArray()
-        // println("After xor: ${array.toBytes()} +")
 
         val bBlocks = brokeBBlock(array)
-        // println("B blocks: ${bBlocks.toBytes()} +")
         var sBlocks =
             bBlocks.mapIndexed { index: Int, Ubyte: UByte -> convertS(Ubyte, index) }.toUByteArray()
-        // println("S blocks: ${sBlocks.toBytes()} +")
         sBlocks = plusSBlocks(sBlocks)
-        // println("Plus S blocks: ${sBlocks.toBytes()} +")
         return replace32(sBlocks, P)
     }
 
@@ -141,14 +140,11 @@ class DesEcbImpl : DesEcb {
         val s = bBlock.toBinary(6)
         val y = (s[0].toString() + s.last()).toInt(2)
         val x = s.drop(1).dropLast(1).toInt(2)
-        // println("S$num y: $y x: $x")
         return sBlocks[num][y][x]
     }
 
     private fun K(key: UByteArray, numIterate: Int): UByteArray {
-        // println("Key : ${key.toBytes()} iterate: $numIterate  0+ ")
         val newKey = replace64(key, G)
-        // println("Key after replace: ${newKey.toBytes()}")
 
         var bytes = ""
         newKey.forEach { bytes += it.toBinary(8) }
@@ -159,19 +155,13 @@ class DesEcbImpl : DesEcb {
         var rightKey = UByteArray(4) {
             (num shl (32 + 4) shr 4 shl it * 8 shr (7 * 8)).toUByte()
         }
-        // println("leftKey: ${leftKey.toBytes()} +")
-        // println("rightKey: ${rightKey.toBytes()} +")
         repeat(numIterate+1) {
             leftKey = cycleShift28(leftKey, shiftTable[it])
             rightKey = cycleShift28(rightKey, shiftTable[it])
         }
-        // println("leftKey after shift: ${leftKey.toBytes()} +")
-        // println("rightKey after shift: ${rightKey.toBytes()} +")
 
         val plusKey = plusKeys(leftKey, rightKey)
-        // println("combineKey: ${plusKey.toBytes()} +")
         val result = replace48forKey(plusKey, H)
-        // println("replace combineKey: ${result.toBytes()} +")
         return result
     }
 
